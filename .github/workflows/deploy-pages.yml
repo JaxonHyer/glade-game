@@ -392,15 +392,22 @@ jobs:
         working-directory: ${{ env.ROOT_DIR }}
         run: |
           set -euo pipefail
+          # --legacy-peer-deps is required for this project: Lovable's floating
+          # semver ranges (e.g. "@tanstack/react-start": "^1.167.14") now resolve
+          # to releases whose peer range demands vite >= 8, while the project
+          # itself pins vite 7 — npm's strict peer resolution aborts with
+          # ERESOLVE. Legacy mode installs the versions the lockfile pins
+          # (TanStack Start 1.167.x + vite 7), which is the combination the
+          # project was generated and tested with.
           if [ -f package-lock.json ]; then
             # Preferred: reproducible install. Falls back when the lockfile is stale
             # (which is the case in this repository — it predates recent dependencies).
-            if npm ci --no-audit --no-fund; then
+            if npm ci --legacy-peer-deps --no-audit --no-fund; then
               exit 0
             fi
-            echo "::warning::'npm ci' failed (package-lock.json is out of sync with package.json) — falling back to 'npm install' for this build. Run 'npm install' locally and commit the updated lockfile to make builds reproducible."
+            echo "::warning::'npm ci' failed (package-lock.json is out of sync with package.json) — falling back to 'npm install --legacy-peer-deps' for this build. Run 'npm install --legacy-peer-deps' locally and commit the updated lockfile to make builds reproducible."
           fi
-          npm install --no-audit --no-fund
+          npm install --legacy-peer-deps --no-audit --no-fund
 
       - name: Build static site
         shell: bash
